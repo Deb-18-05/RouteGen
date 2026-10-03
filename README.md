@@ -252,10 +252,11 @@ Check the Esri imagery terms before using generated satellite tiles outside pers
 - [x] Route validation
 - [x] Topology classification (junctions, sidings, way transitions)
 - [x] TDB, TEB and SDB export
+- [x] Automated core unit tests
 - [ ] STB (stations) export
 - [ ] PTB (platforms) export
 - [ ] RTB (relationships) export
-- [ ] Automated tests with an offline sample dataset
+- [ ] Offline sample-dataset tests
 - [ ] Via-points and multi-route support
 - [ ] Support for countries beyond India
 - [ ] Command-line options in place of interactive prompts

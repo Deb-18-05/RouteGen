@@ -1,40 +1,35 @@
 @echo off
 setlocal
 
-echo Initializing RouteGen...
+cd /d "%~dp0"
+if errorlevel 1 goto :error
 
-mkdir routegen 2>nul
-mkdir data 2>nul
-mkdir output 2>nul
-mkdir tests 2>nul
+where python >nul 2>nul
+if errorlevel 1 (
+    echo Python was not found. Install Python 3.9 or newer and try again.
+    exit /b 1
+)
 
-mkdir routegen\station 2>nul
-mkdir routegen\mapdata 2>nul
-mkdir routegen\routing 2>nul
-mkdir routegen\railway 2>nul
-mkdir routegen\topology 2>nul
-mkdir routegen\terrain 2>nul
-mkdir routegen\scenery 2>nul
-mkdir routegen\export 2>nul
+if not exist ".venv\Scripts\python.exe" (
+    echo Creating the RouteGen virtual environment...
+    python -m venv .venv
+    if errorlevel 1 goto :error
+)
 
-type nul > routegen\__init__.py
-type nul > routegen\main.py
-type nul > routegen\station\__init__.py
-type nul > routegen\mapdata\__init__.py
-type nul > routegen\routing\__init__.py
-type nul > routegen\railway\__init__.py
-type nul > routegen\topology\__init__.py
-type nul > routegen\terrain\__init__.py
-type nul > routegen\scenery\__init__.py
-type nul > routegen\export\__init__.py
+if not exist "data" mkdir data
+if errorlevel 1 goto :error
+if not exist "output" mkdir output
+if errorlevel 1 goto :error
 
-type nul > requirements.txt
-type nul > README.md
+echo Installing RouteGen dependencies...
+".venv\Scripts\python.exe" -m pip install -r requirements.txt
+if errorlevel 1 goto :error
 
 echo.
-echo RouteGen initialized successfully.
-echo.
+echo RouteGen setup completed.
+echo Activate the environment with .venv\Scripts\Activate.ps1
+exit /b 0
 
-tree /F
-
-pause
+:error
+echo RouteGen setup failed.
+exit /b 1

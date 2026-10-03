@@ -28,6 +28,8 @@ def haversine_distance(
         * math.sin(delta_lon / 2) ** 2
     )
 
+    a = min(1.0, max(0.0, a))
+
     c = 2 * math.atan2(
         math.sqrt(a),
         math.sqrt(1 - a)
@@ -119,6 +121,80 @@ def find_nearest_graph_node(
     return candidates[0]
 
 
+def _shortest_paths_to_targets(
+    start_node,
+    target_nodes,
+    nodes,
+    graph
+):
+    """Find shortest paths from one start to a set of target nodes."""
+
+    if start_node not in graph:
+        return {}, {}
+
+    remaining_targets = set(target_nodes)
+
+    if not remaining_targets:
+        return {}, {}
+
+    distances = {start_node: 0.0}
+    previous = {}
+    priority_queue = [(0.0, start_node)]
+
+    while priority_queue:
+        current_distance, current_node = heapq.heappop(priority_queue)
+
+        if current_distance > distances.get(current_node, float("inf")):
+            continue
+
+        remaining_targets.discard(current_node)
+
+        if not remaining_targets:
+            break
+
+        current_data = nodes.get(current_node)
+
+        if current_data is None:
+            continue
+
+        for neighbour in graph.get(current_node, set()):
+            neighbour_data = nodes.get(neighbour)
+
+            if neighbour_data is None:
+                continue
+
+            edge_distance = haversine_distance(
+                current_data["latitude"],
+                current_data["longitude"],
+                neighbour_data["latitude"],
+                neighbour_data["longitude"]
+            )
+            new_distance = current_distance + edge_distance
+
+            if new_distance < distances.get(neighbour, float("inf")):
+                distances[neighbour] = new_distance
+                previous[neighbour] = current_node
+                heapq.heappush(priority_queue, (new_distance, neighbour))
+
+    return distances, previous
+
+
+def _reconstruct_path(start_node, end_node, previous):
+    path = []
+    current = end_node
+
+    while current != start_node:
+        if current not in previous:
+            return None
+
+        path.append(current)
+        current = previous[current]
+
+    path.append(start_node)
+    path.reverse()
+    return path
+
+
 def shortest_path(
     start_node,
     end_node,
@@ -139,104 +215,17 @@ def shortest_path(
     if end_node not in graph:
         return None, None
 
-    distances = {
-        start_node: 0.0
-    }
-
-    previous = {}
-
-    priority_queue = [
-        (0.0, start_node)
-    ]
-
-    visited = set()
-
-    while priority_queue:
-
-        current_distance, current_node = (
-            heapq.heappop(priority_queue)
-        )
-
-        if current_node in visited:
-            continue
-
-        visited.add(current_node)
-
-        if current_node == end_node:
-            break
-
-        current_data = nodes.get(
-            current_node
-        )
-
-        if current_data is None:
-            continue
-
-        for neighbour in graph.get(
-            current_node,
-            set()
-        ):
-
-            if neighbour in visited:
-                continue
-
-            neighbour_data = nodes.get(
-                neighbour
-            )
-
-            if neighbour_data is None:
-                continue
-
-            edge_distance = haversine_distance(
-                current_data["latitude"],
-                current_data["longitude"],
-                neighbour_data["latitude"],
-                neighbour_data["longitude"]
-            )
-
-            new_distance = (
-                current_distance
-                + edge_distance
-            )
-
-            if new_distance < distances.get(
-                neighbour,
-                float("inf")
-            ):
-
-                distances[neighbour] = new_distance
-
-                previous[neighbour] = (
-                    current_node
-                )
-
-                heapq.heappush(
-                    priority_queue,
-                    (
-                        new_distance,
-                        neighbour
-                    )
-                )
+    distances, previous = _shortest_paths_to_targets(
+        start_node,
+        {end_node},
+        nodes,
+        graph
+    )
 
     if end_node not in distances:
         return None, None
 
-    path = []
-
-    current = end_node
-
-    while current != start_node:
-
-        if current not in previous:
-            return None, None
-
-        path.append(current)
-
-        current = previous[current]
-
-    path.append(start_node)
-
-    path.reverse()
+    path = _reconstruct_path(start_node, end_node, previous)
 
     return path, distances[end_node]
 
@@ -311,9 +300,21 @@ def find_route_between_stations(
     tested_pairs = 0
     connected_pairs = 0
 
+    end_node_ids = {
+        node_id
+        for node_id, _ in end_candidates
+    }
+
     for start_node, start_distance in (
         start_candidates
     ):
+
+        distances, previous = _shortest_paths_to_targets(
+            start_node,
+            end_node_ids,
+            nodes,
+            graph
+        )
 
         for end_node, end_distance in (
             end_candidates
@@ -321,21 +322,20 @@ def find_route_between_stations(
 
             tested_pairs += 1
 
-            path, route_distance = shortest_path(
-                start_node,
-                end_node,
-                nodes,
-                graph
-            )
+            route_distance = distances.get(end_node)
 
-            if path is None:
+            if route_distance is None:
                 continue
 
             connected_pairs += 1
 
             if route_distance < best_distance:
 
-                best_path = path
+                best_path = _reconstruct_path(
+                    start_node,
+                    end_node,
+                    previous
+                )
                 best_distance = route_distance
 
                 best_start_node = start_node

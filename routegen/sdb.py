@@ -1368,6 +1368,8 @@ def haversine_meters(
         * math.sin(dlambda / 2) ** 2
     )
 
+    a = min(1.0, max(0.0, a))
+
     return (
         2
         * radius

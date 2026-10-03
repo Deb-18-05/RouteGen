@@ -64,6 +64,8 @@ def haversine_m(lat1, lon1, lat2, lon2):
         * math.sin(dlambda / 2.0) ** 2
     )
 
+    a = min(1.0, max(0.0, a))
+
     return 2.0 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
 
 
@@ -80,6 +82,8 @@ def haversine_array(lat1, lon1, lat2, lon2):
         * np.cos(phi2)
         * np.sin(dlambda / 2.0) ** 2
     )
+
+    a = np.clip(a, 0.0, 1.0)
 
     return 2.0 * EARTH_RADIUS_M * np.arcsin(np.sqrt(a))
 
@@ -266,8 +270,8 @@ out body geom;
 
 def station_cache_path(south, west, north, east):
     return STATION_DATA_DIRECTORY / (
-        f"stations_S{south:.4f}_W{west:.4f}"
-        f"_N{north:.4f}_E{east:.4f}.json"
+        f"stations_S{south:.6f}_W{west:.6f}"
+        f"_N{north:.6f}_E{east:.6f}.json"
     )
 
 

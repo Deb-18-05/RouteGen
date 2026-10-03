@@ -763,11 +763,28 @@ def _write_list(
         start=1
     ):
 
-        _write_indent(
-            lines,
-            level + 1,
-            f"{index} = {_format_scalar(value)}"
-        )
+        if isinstance(value, dict):
+            _write_dict(
+                lines,
+                level + 1,
+                f"ITEM {index}",
+                value
+            )
+
+        elif isinstance(value, (list, tuple)):
+            _write_list(
+                lines,
+                level + 1,
+                f"ITEM {index}",
+                value
+            )
+
+        else:
+            _write_indent(
+                lines,
+                level + 1,
+                f"{index} = {_format_scalar(value)}"
+            )
 
     _write_indent(
         lines,

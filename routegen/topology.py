@@ -163,14 +163,11 @@ def haversine_distance(
         * math.sin(delta_lon / 2.0) ** 2
     )
 
+    a = min(1.0, max(0.0, a))
+
     c = 2.0 * math.atan2(
         math.sqrt(a),
-        math.sqrt(
-            max(
-                0.0,
-                1.0 - a
-            )
-        )
+        math.sqrt(1.0 - a)
     )
 
     return earth_radius * c
