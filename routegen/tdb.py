@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 
@@ -1677,12 +1678,16 @@ def write_tdb(
         exist_ok=True
     )
 
+    temporary = output_path.with_suffix(
+        output_path.suffix + ".tmp"
+    )
+
     text = serialize_tdb(
         database
     )
 
     with open(
-        output_path,
+        temporary,
         "w",
         encoding="utf-8"
     ) as file:
@@ -1690,6 +1695,11 @@ def write_tdb(
         file.write(
             text
         )
+
+    os.replace(
+        temporary,
+        output_path
+    )
 
     return output_path
 

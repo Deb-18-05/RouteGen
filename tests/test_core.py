@@ -1,5 +1,7 @@
 import math
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from routegen.pathfinder import (
@@ -14,7 +16,8 @@ from routegen.stationdata import (
     haversine_m,
     station_cache_path,
 )
-from routegen.tdb import serialize_tdb
+from routegen.tdb import serialize_tdb, write_tdb
+from routegen.teb import serialize_teb
 from routegen.topology import haversine_distance as topology_distance
 from routegen.validator import haversine_distance as validator_distance
 
@@ -123,6 +126,82 @@ class TdbSerializationTests(unittest.TestCase):
         )
         self.assertIn('type = "high_way_fanout"', text)
         self.assertNotIn("{'type':", text)
+
+    def test_failed_replace_preserves_existing_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "route.tdb"
+            output_path.write_text("previous database", encoding="utf-8")
+
+            with patch(
+                "routegen.tdb.os.replace",
+                side_effect=OSError("simulated replacement failure"),
+            ):
+                with self.assertRaises(OSError):
+                    write_tdb(
+                        {
+                            "database_type": "TDB",
+                            "database_version": "1.0",
+                            "track_count": 0,
+                        },
+                        output_path,
+                    )
+
+            self.assertEqual(
+                output_path.read_text(encoding="utf-8"),
+                "previous database",
+            )
+
+
+class TebSerializationTests(unittest.TestCase):
+    def test_paths_are_escaped_and_failed_replace_preserves_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "terrain.teb"
+            output_path.write_text("previous database", encoding="utf-8")
+
+            teb = {
+                "database_type": "TEB",
+                "database_version": "1.0",
+                "coverage": {
+                    "south": 0,
+                    "west": 0,
+                    "north": 1,
+                    "east": 1,
+                },
+                "dem": {
+                    "source": "test",
+                    "format": "HGT",
+                    "statistics": {},
+                    "tiles": [{
+                        "name": "N00E000",
+                        "latitude": 0,
+                        "longitude": 0,
+                        "samples": 1,
+                        "file": r"output\terrain\dem\N00E000.hgt",
+                    }],
+                },
+                "satellite": {
+                    "source": "test",
+                    "format": "JPEG tiles",
+                    "zoom": 1,
+                    "tiles": [],
+                },
+            }
+
+            with patch(
+                "routegen.teb.os.replace",
+                side_effect=OSError("simulated replacement failure"),
+            ):
+                with self.assertRaises(OSError):
+                    serialize_teb(teb, output_path)
+
+            self.assertEqual(
+                output_path.read_text(encoding="utf-8"),
+                "previous database",
+            )
+
+            temporary_path = output_path.with_suffix(".teb.tmp")
+            serialized = temporary_path.read_text(encoding="utf-8")
+            self.assertIn(r'FILE = "output\\terrain\\dem\\N00E000.hgt"', serialized)
 
 
 if __name__ == "__main__":

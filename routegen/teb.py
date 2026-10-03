@@ -1,6 +1,7 @@
 import gzip
 import json
 import math
+import os
 from pathlib import Path
 
 import numpy as np
@@ -846,7 +847,14 @@ def _format_scalar(value):
         return "TRUE" if value else "FALSE"
 
     if isinstance(value, str):
-        return f'"{value}"'
+        text = (
+            value
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+        )
+        return f'"{text}"'
 
     return str(value)
 
@@ -890,8 +898,12 @@ def serialize_teb(
         exist_ok=True
     )
 
+    temporary = output_path.with_suffix(
+        output_path.suffix + ".tmp"
+    )
+
     with open(
-        output_path,
+        temporary,
         "w",
         encoding="utf-8"
     ) as file:
@@ -1271,6 +1283,11 @@ def serialize_teb(
         file.write(
             "}\n"
         )
+
+    os.replace(
+        temporary,
+        output_path
+    )
 
     return output_path
 
