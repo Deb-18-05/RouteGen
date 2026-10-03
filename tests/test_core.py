@@ -151,6 +151,19 @@ class TdbSerializationTests(unittest.TestCase):
                 "previous database",
             )
 
+            write_tdb(
+                {
+                    "database_type": "TDB",
+                    "database_version": "1.0",
+                    "track_count": 0,
+                },
+                output_path,
+            )
+            self.assertIn(
+                "TRAIN_GO_TRACK_DATABASE",
+                output_path.read_text(encoding="utf-8"),
+            )
+
 
 class TebSerializationTests(unittest.TestCase):
     def test_paths_are_escaped_and_failed_replace_preserves_database(self):
@@ -199,9 +212,12 @@ class TebSerializationTests(unittest.TestCase):
                 "previous database",
             )
 
-            temporary_path = output_path.with_suffix(".teb.tmp")
-            serialized = temporary_path.read_text(encoding="utf-8")
-            self.assertIn(r'FILE = "output\\terrain\\dem\\N00E000.hgt"', serialized)
+            serialize_teb(teb, output_path)
+            serialized = output_path.read_text(encoding="utf-8")
+            self.assertIn(
+                r'FILE = "output\\terrain\\dem\\N00E000.hgt"',
+                serialized,
+            )
 
 
 if __name__ == "__main__":
